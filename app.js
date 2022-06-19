@@ -2,6 +2,7 @@
 
 const express = require("express");
 const bodyParser = require("body-parser");
+const mongoose = require("mongoose");
 const date = require(__dirname + "/date.js");
 
 const app = express();
@@ -11,14 +12,46 @@ app.set('view engine', 'ejs');
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(express.static("public"));
 
-const items = ["Buy Food", "Cook Food", "Eat Food"];
-const workItems = [];
+mongoose.connect("mongodb://localhost:27017/todolistDB",{useNewUrlParser: true});
+const itemsSchema = {
+  name: String
+};
+
+const Item = mongoose.model("Item", itemsSchema);
+
+const item1 = {
+
+  name: "Buy food"
+}
+const item2 = {
+
+  name: "Borrow tools"
+}
+const item3 = {
+
+  name: "Sell car"
+}
+
+const defaultItems = [item1, item2, item3];
+
+// Item.insertMany(defaultItems, function (err) {
+
+//   if (err) {
+//     console.log(err);
+//   } else {
+//     console.log("Insert sucess");
+//   }
+  
+// });
 
 app.get("/", function(req, res) {
 
-const day = date.getDate();
+Item.find({},function (err, foundItems) {
+  res.render("list", {listTitle: "Today", newListItems: foundItems});
+})
 
-  res.render("list", {listTitle: day, newListItems: items});
+
+  
 
 });
 
@@ -30,7 +63,7 @@ app.post("/", function(req, res){
     workItems.push(item);
     res.redirect("/work");
   } else {
-    items.push(item);
+    defaultItems.push(item);
     res.redirect("/");
   }
 });
