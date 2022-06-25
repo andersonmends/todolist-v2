@@ -4,6 +4,8 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
 const date = require(__dirname + "/date.js");
+const _ = require("lodash");
+const defaultListName = "Today"
 
 const app = express();
 
@@ -64,7 +66,7 @@ app.get("/", function (req, res) {
       console.log("Find items");
     }
 
-    res.render("list", { listTitle: "Today", newListItems: foundItems });
+    res.render("list", { listTitle: defaultListName, newListItems: foundItems });
   })
 
 });
@@ -72,32 +74,62 @@ app.get("/", function (req, res) {
 app.post("/", function (req, res) {
 
   const itemReq = req.body.newItem;
-
+  const listName = req.body.list.trim();
   const item = new Item({
-
     name: itemReq
   });
 
-  item.save()
-  res.redirect("/");
+  console.log(listName);
+
+  if (defaultListName === listName) {
+    console.log("Today is TRUE");
+    item.save();
+    res.redirect("/");
+
+  } else {
+    console.log("Is not today FALSE");
+    List.findOne({ name: listName }, function (err, foundList) {
+      foundList.items.push(item);
+      foundList.save();
+      res.redirect("/" + listName);
+    });
+  }
+
 
 });
 
 app.post("/delete", function (req, res) {
 
   const itemId = req.body.checkbox;
+  const listName = req.body.list.trim();
   console.log(itemId);
-  Item.findByIdAndRemove(itemId, function (err) {
-    if (!err) {
-      console.log("Successfully remove");
-    }
-  })
-  res.redirect("/");
+
+
+  if (defaultListName === listName) {
+
+    Item.findByIdAndRemove(itemId, function (err) {
+      if (!err) {
+        console.log("Successfully remove");
+        res.redirect("/");
+      }
+    });
+  } else {
+    console.log("Is not today FALSE");
+    List.findOneAndUpdate({ name: listName }, { $pull: { items: { _id: itemId } } }, function (err, listFound) {
+      if (!err) {
+        res.redirect("/" + listName);
+      }
+    });
+  }
+
+
+
+
 
 });
 
 app.get("/:customListName", function (req, res) {
-  const customListName = req.params.customListName;
+  const customListName = _.capitalize(req.params.customListName);
   List.findOne({ name: customListName }, function (err, foundItem) {
     if (!err) {
       if (!foundItem) {
